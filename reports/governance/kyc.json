@@ -1,0 +1,83 @@
+{
+  "app": "kyc",
+  "tables": [
+    {
+      "name": "kyc_case",
+      "pk": "id:uuid",
+      "audit_trigger": true
+    }
+  ],
+  "audit_event_shape": [
+    "id",
+    "occurred_at",
+    "actor_id",
+    "app",
+    "action",
+    "resource_type",
+    "resource_id",
+    "before",
+    "after",
+    "request_id"
+  ],
+  "audit_actions_seen": [
+    "delete",
+    "insert",
+    "update"
+  ],
+  "approval_constraints": [
+    "approval_actor_matches",
+    "approval_decision_has_decider",
+    "approval_decision_has_rationale",
+    "approval_decision_vocabulary",
+    "approval_maker_checker"
+  ],
+  "app_role_grants": {
+    "approval": [
+      "INSERT",
+      "SELECT",
+      "UPDATE"
+    ],
+    "audit_event": [
+      "SELECT"
+    ],
+    "kyc_case": [
+      "DELETE",
+      "INSERT",
+      "SELECT",
+      "UPDATE"
+    ]
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/cases",
+      "action": "read",
+      "resourceType": "kyc_case"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cases/:id",
+      "action": "read",
+      "resourceType": "kyc_case"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cases/:id/decision",
+      "action": "approve",
+      "resourceType": "kyc_case"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cases/:id/review-requests",
+      "action": "write",
+      "resourceType": "kyc_case"
+    },
+    {
+      "method": "GET",
+      "path": "/api/me",
+      "action": "read",
+      "resourceType": "kyc_case"
+    }
+  ],
+  "routes_outside_registry": []
+}

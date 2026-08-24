@@ -1,0 +1,110 @@
+:root {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: #111;
+}
+
+body {
+  margin: 0;
+  background: #f6f6f6;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+}
+
+header h1 {
+  font-size: 1rem;
+  margin: 0;
+  margin-right: auto;
+}
+
+main {
+  padding: 1.25rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #eee;
+  font-size: 0.875rem;
+}
+
+tbody tr {
+  cursor: pointer;
+}
+
+tbody tr:hover {
+  background: #f0f6ff;
+}
+
+fieldset {
+  border: 1px solid #ddd;
+  background: #fff;
+  margin-bottom: 1rem;
+}
+
+.error {
+  background: #fff2f2;
+  border: 1px solid #e0a0a0;
+  padding: 0.6rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+}
+
+.notice {
+  background: #f2fff5;
+  border: 1px solid #a0d0a8;
+  padding: 0.6rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.timeline li {
+  background: #fff;
+  border: 1px solid #eee;
+  padding: 0.6rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+pre {
+  margin: 0.3rem 0 0;
+  padding: 0.4rem;
+  background: #fafafa;
+  border: 1px solid #eee;
+  overflow-x: auto;
+  font-size: 0.75rem;
+}
+
+.diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
