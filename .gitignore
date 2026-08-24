@@ -1,0 +1,19 @@
+# env
+.env
+.env.*
+!.env.example
+
+# node
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# test / report outputs that are regenerated (session reports and governance JSON ARE committed)
+reports/junit/
+coverage/
+
+# editors / os
+.vscode/
+.idea/
+.DS_Store
