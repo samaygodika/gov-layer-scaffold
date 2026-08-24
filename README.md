@@ -28,6 +28,13 @@ npm run tamper-check         # proves the two CI guardrails fire; see below
 npm run dev -w apps/<name>   # starts one app: Fastify on :3000, Vite on :5173
 ```
 
+`setup-db.sh` needs a superuser connection and defaults to `psql -U postgres -h localhost`, which on a
+stock local Postgres asks for a password nobody has. Override the connection instead:
+
+```
+PSQL="sudo -u postgres psql -v ON_ERROR_STOP=1" ./scripts/setup-db.sh
+```
+
 `.env` is read from the repository root by every entry point, whatever the cwd, so the workspace
 commands below work from anywhere in the repo.
 
