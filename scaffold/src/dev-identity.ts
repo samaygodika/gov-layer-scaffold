@@ -14,6 +14,13 @@ import { appPool } from "./with-actor.js";
 export const DEV_ACTOR_HEADER = "x-dev-actor";
 export const DEV_ACTOR_COOKIE = "dev_actor";
 
+/**
+ * NODE_ENV may come from the process environment or from a `.env` file, since
+ * scaffold/src/env.ts loads dotenv at import time. An explicitly set NODE_ENV
+ * always wins (dotenv does not override), so `NODE_ENV=production` is inert
+ * whatever `.env` says — but an unset NODE_ENV plus a `.env` carrying
+ * `NODE_ENV=development` does enable the switcher.
+ */
 export const isDevelopment = (): boolean => process.env.NODE_ENV === "development";
 
 /** Minimal cookie parsing; the scaffold ships no cookie plugin. */
