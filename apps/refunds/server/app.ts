@@ -1,4 +1,4 @@
-import { isAuthorized, createServer, type ScaffoldServer } from "../../../scaffold/src/index.js";
+import { createServer, isAuthorized, type ScaffoldServer } from "@scaffold/core";
 
 const RESOURCE_TYPE = "refund_request";
 const APPROVAL_THRESHOLD_CENTS = 10_000;
@@ -25,6 +25,11 @@ type ApprovalRow = {
   rationale: string | null;
 };
 
+type ApprovalDetailRow = ApprovalRow & {
+  requested_by_subject: string;
+  decided_by_subject: string | null;
+};
+
 type Body = Record<string, unknown>;
 
 type HttpError = Error & { statusCode: number };
@@ -36,8 +41,8 @@ function translateDatabaseError(error: unknown): never {
   const pgError = error as { code?: string; constraint?: string; message?: string };
   const message = pgError.message ?? String(error);
   if (
+    pgError.constraint === "approval_maker_checker" ||
     message.includes("refund_request approval required") ||
-    message.includes("approval_maker_checker") ||
     message.includes("approval_actor_matches")
   ) {
     throw httpError(409, message);
@@ -173,10 +178,16 @@ export function createApp(): ScaffoldServer {
       );
       const refund = found.rows[0];
       if (!refund) throw httpError(404, "refund request not found");
-      const approvals = await tx.query<ApprovalRow>(
-        `SELECT id, resource_type, resource_id, requested_by, decided_by, decision, decided_at, rationale
-           FROM approval WHERE resource_type = $1 AND resource_id = $2
-          ORDER BY id`,
+      const approvals = await tx.query<ApprovalDetailRow>(
+        `SELECT p.id, p.resource_type, p.resource_id, p.requested_by, p.decided_by,
+                p.decision, p.decided_at, p.rationale,
+                requester.external_subject AS requested_by_subject,
+                decider.external_subject AS decided_by_subject
+           FROM approval p
+           JOIN actor requester ON requester.id = p.requested_by
+           LEFT JOIN actor decider ON decider.id = p.decided_by
+          WHERE p.resource_type = $1 AND p.resource_id = $2
+          ORDER BY p.id`,
         [RESOURCE_TYPE, id],
       );
       const approvalIds = approvals.rows.map((approval) => approval.id);
@@ -228,14 +239,12 @@ export function createApp(): ScaffoldServer {
     async ({ tx, params, actor, reply }) =>
       withDatabaseErrors(async () => {
         const id = refundId(params);
-        await tx.query("SELECT id FROM refund_request WHERE id = $1 FOR UPDATE", [id]).then((result) => {
-          if (result.rowCount === 0) throw httpError(404, "refund request not found");
-        });
-        const refund = await tx.query<{ status: string }>(
-          "SELECT status FROM refund_request WHERE id = $1",
+        const refund = await tx.query<{ id: string; status: string }>(
+          "SELECT id, status FROM refund_request WHERE id = $1 FOR UPDATE",
           [id],
         );
-        if (refund.rows[0]?.status !== "pending") {
+        if (!refund.rows[0]) throw httpError(404, "refund request not found");
+        if (refund.rows[0].status !== "pending") {
           throw httpError(409, "refund request must be pending before requesting review");
         }
         const open = await tx.query("SELECT 1 FROM approval WHERE resource_type = $1 AND resource_id = $2 AND decision IS NULL", [
@@ -285,16 +294,13 @@ export function createApp(): ScaffoldServer {
           RETURNING id, resource_type, resource_id, requested_by, decided_by, decision, decided_at, rationale`,
           [actor.id, decision, rationale, open.rows[0].id],
         );
-        await tx.query<RefundRow>(
+        if (!updated.rows[0]) throw httpError(409, "approval was already decided by another actor");
+        const refund = await tx.query<RefundRow>(
           `UPDATE refund_request SET status = $1 WHERE id = $2
           RETURNING id, transaction_ref, amount_cents, currency, reason, requested_at, status`,
           [decision, id],
         );
-        return { approval: updated.rows[0], refund: (await tx.query<RefundRow>(
-          `SELECT id, transaction_ref, amount_cents, currency, reason, requested_at, status
-             FROM refund_request WHERE id = $1`,
-          [id],
-        )).rows[0] };
+        return { approval: updated.rows[0], refund: refund.rows[0] };
       }),
   );
 
@@ -303,6 +309,15 @@ export function createApp(): ScaffoldServer {
     async ({ tx, params }) =>
       withDatabaseErrors(async () => {
         const id = refundId(params);
+        const current = await tx.query<RefundRow>(
+          `SELECT id, transaction_ref, amount_cents, currency, reason, requested_at, status
+             FROM refund_request WHERE id = $1 FOR UPDATE`,
+          [id],
+        );
+        if (!current.rows[0]) throw httpError(404, "refund request not found");
+        if (current.rows[0].status !== "pending") {
+          throw httpError(409, "refund request must be pending before completion");
+        }
         const updated = await tx.query<RefundRow>(
           `UPDATE refund_request SET status = 'approved'
             WHERE id = $1

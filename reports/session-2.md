@@ -55,6 +55,7 @@ Full combined run: `SESSION=session-2 npm test` — `Test Files 15 passed (15)`,
   distinction between triage and approval.
 - Required pending state before a refund can request review or complete; threshold
   enforcement remains in the database trigger.
+- Guarded concurrent approval updates and reused the refund update's `RETURNING` row.
 - Rendered audit histories oldest-first and joined approval actor external subjects so
   the UI shows human-readable identities.
 - Seeded refund fixtures as Carol, the agent representing the domain's intake actor.
@@ -68,6 +69,9 @@ Full combined run: `SESSION=session-2 npm test` — `Test Files 15 passed (15)`,
   the merged main version: `tsc --noEmit`.
 - Kept the root Vitest discovery pattern `apps/*/tests/**/*.test.ts`, which runs both
   app suites together.
+- The body-less browser mutations now omit `content-type: application/json` when no
+  body exists. The route tests reproduce the old header shape (Fastify 400) and the
+  corrected browser shape (successful request-review and completion).
 - The KYC app treats the first reviewer opening a review as the maker for upstream
   cases, while seeded KYC cases remain pending and attributed to Carol.
 
@@ -85,6 +89,8 @@ Full combined run: `SESSION=session-2 npm test` — `Test Files 15 passed (15)`,
   reject; a separate reject permission would require a new scaffold action.
 - The app-specific visual designs are intentionally plain controls and tables; no
   browser automation harness is part of the repository.
+- The UI actor selector uses a neutral placeholder with no `dev_actor` cookie rather
+  than implying an authenticated actor.
 
 ## 4. Things I wanted to change but did not
 
@@ -124,6 +130,10 @@ adds the refunds evidence and the combined-suite facts.
 - Resolved shared scaffold files in favor of main, then adapted refunds to the merged
   seed contract and root TypeScript/Vitest configuration.
 - Merged workspace dependency metadata and preserved both app documentation/artifacts.
+- Browser verification covered Bob's self-approval refusal and verbatim
+  `approval_maker_checker` message, Alice's approval and audit diff, Carol's hidden
+  controls, and filter/pagination checks.
+- The browser run found and the client fixed the empty-body JSON content-type bug.
 - Fresh-database verification covered migration, both app seeds, combined typecheck,
   combined tests, tamper checks, governance reports, and the refunds build.
 

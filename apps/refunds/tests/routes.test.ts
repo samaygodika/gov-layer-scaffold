@@ -3,9 +3,10 @@ import {
   appTableAudits,
   assertAllAppTablesAreAudited,
   assertAllRoutesAreRegistered,
-} from "../../../scaffold/src/checks.js";
-import { closeAppPool, withActor } from "../../../scaffold/src/with-actor.js";
-import type { ScaffoldServer } from "../../../scaffold/src/server.js";
+  closeAppPool,
+  withActor,
+  type ScaffoldServer,
+} from "@scaffold/core";
 import { actor, connect } from "../../../scaffold/tests/helpers.js";
 import { createApp } from "../server/app.js";
 
@@ -204,7 +205,7 @@ describe("refunds dashboard", () => {
     );
   });
 
-  it("AC-4 threshold completion requires approval only at or above 10,000 cents", async () => {
+  it("threshold completion requires approval only at or above 10,000 cents", async () => {
     const small = await createRefund("bob", 9999);
     const completed = await request("POST", `/refunds/${small}/complete`, "bob");
     expect(completed.statusCode).toBe(200);
@@ -223,7 +224,7 @@ describe("refunds dashboard", () => {
     expect(approved.json().refund.status).toBe("approved");
   });
 
-  it("AC-4 agents are denied the decision route and rationale is required", async () => {
+  it("agents are denied the decision route and rationale is required", async () => {
     const id = await createRefund("bob");
     await requestReview(id, "bob");
     const denied = await request("POST", `/refunds/${id}/decision`, "carol", {
@@ -237,5 +238,18 @@ describe("refunds dashboard", () => {
     });
     expect(missing.statusCode).toBe(400);
     expect(missing.json().error).toMatch(/rationale is required/);
+  });
+
+  it("complete refuses a rejected refund", async () => {
+    const id = await createRefund("bob");
+    await requestReview(id, "bob");
+    const rejected = await request("POST", `/refunds/${id}/decision`, "alice", {
+      decision: "rejected",
+      rationale: "Rejected for testing completion state",
+    });
+    expect(rejected.statusCode).toBe(200);
+    const refused = await request("POST", `/refunds/${id}/complete`, "alice");
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json().error).toMatch(/must be pending/);
   });
 });

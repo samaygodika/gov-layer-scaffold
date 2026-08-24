@@ -15,7 +15,9 @@ type Refund = {
 type Approval = {
   id: string;
   requested_by: string;
+  requested_by_subject: string;
   decided_by: string | null;
+  decided_by_subject: string | null;
   decision: "approved" | "rejected" | null;
   decided_at: string | null;
   rationale: string | null;
@@ -59,7 +61,7 @@ async function api<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 function TopBar({ onError }: { onError: (message: string) => void }) {
-  const current = document.cookie.match(/(?:^|;\s*)dev_actor=([^;]+)/)?.[1] ?? "alice";
+  const current = document.cookie.match(/(?:^|;\s*)dev_actor=([^;]+)/)?.[1];
   return (
     <header className="topbar">
       <a href="#/">Refunds dashboard</a>
@@ -69,13 +71,14 @@ function TopBar({ onError }: { onError: (message: string) => void }) {
         <label>
           Dev actor{" "}
           <select
-            defaultValue={decodeURIComponent(current)}
+            defaultValue={current ? decodeURIComponent(current) : ""}
             onChange={(event) => {
               document.cookie = `${DEV_ACTOR_COOKIE}=${encodeURIComponent(event.target.value)}; path=/`;
               onError("");
               window.location.reload();
             }}
           >
+            <option value="" disabled>Select actor</option>
             <option value="alice">alice</option>
             <option value="bob">bob</option>
             <option value="carol">carol</option>
@@ -207,7 +210,7 @@ function DetailScreen({ id, onError }: { id: string; onError: (message: string) 
       </section>
       <section className="card">
         <h2>Approval history</h2>
-        {detail.approvals.length === 0 ? <p className="muted">No review requested.</p> : detail.approvals.map((approval) => <div className="approval" key={approval.id}><strong>{approval.decision ?? "review requested"}</strong><span>Requested by {approval.requested_by}</span>{approval.decided_by && <span>Decided by {approval.decided_by}</span>}{approval.rationale && <p>{approval.rationale}</p>}</div>)}
+        {detail.approvals.length === 0 ? <p className="muted">No review requested.</p> : detail.approvals.map((approval) => <div className="approval" key={approval.id}><strong>{approval.decision ?? "review requested"}</strong><span>Requested by {approval.requested_by_subject}</span>{approval.decided_by_subject && <span>Decided by {approval.decided_by_subject}</span>}{approval.rationale && <p>{approval.rationale}</p>}</div>)}
       </section>
       <section className="card">
         <h2>Audit timeline</h2>
