@@ -63,6 +63,19 @@ describe("separation of duties", () => {
     expect(failure.message).toMatch(/approval\.decided_by .* must equal app\.actor_id/);
   });
 
+  it("SC-4 requested_by cannot be rewritten after insert", async () => {
+    const failure = await inTransaction({ actorId: alice, app: "kyc" }, async (tx) => {
+      const inserted = await insertRequest(tx, alice);
+      return expectFailure(
+        tx.query("UPDATE approval SET requested_by = $1 WHERE id = $2", [
+          bob,
+          inserted.rows[0]!.id,
+        ]),
+      );
+    });
+    expect(failure.message).toMatch(/approval\.requested_by is immutable/);
+  });
+
   it("SC-5 a decision without a rationale is rejected", async () => {
     const failure = await inTransaction({ actorId: bob, app: "kyc" }, async (tx) => {
       const inserted = await insertRequest(tx, bob);
