@@ -12,7 +12,9 @@
   "scripts": {
     "migrate": "tsx scaffold/src/migrate.ts",
     "seed": "tsx scaffold/src/seed.ts",
-    "test": "vitest run --reporter=default --reporter=junit --outputFile=reports/junit/session-1a.xml",
+    "test": "vitest run --reporter=default --reporter=junit --outputFile=reports/junit/${SESSION:-session-1b}.xml",
+    "governance-report": "tsx scaffold/src/governance-report.ts",
+    "tamper-check": "tsx scaffold/src/tamper-check.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -24,6 +26,7 @@
   },
   "dependencies": {
     "dotenv": "^16.4.7",
+    "fastify": "^5.12.1",
     "pg": "^8.13.1"
   }
 }

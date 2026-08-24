@@ -11,18 +11,22 @@ describe("migrations", () => {
       );
       expect(applied.rows.map((row) => row.filename)).toEqual(await migrationFilenames());
 
+      // A superset check, not an equality one: app sessions add their own tables
+      // to this schema, and all_app_tables_are_audited is what constrains them.
       const tables = await client.query<{ table_name: string }>(
         `SELECT table_name FROM information_schema.tables
           WHERE table_schema = 'public' ORDER BY table_name`,
       );
-      expect(tables.rows.map((row) => row.table_name)).toEqual([
-        "_scaffold_fixture",
-        "actor",
-        "approval",
-        "audit_event",
-        "permission_grant",
-        "schema_migration",
-      ]);
+      expect(tables.rows.map((row) => row.table_name)).toEqual(
+        expect.arrayContaining([
+          "_scaffold_fixture",
+          "actor",
+          "approval",
+          "audit_event",
+          "permission_grant",
+          "schema_migration",
+        ]),
+      );
     } finally {
       await client.end();
     }

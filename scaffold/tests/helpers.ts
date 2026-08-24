@@ -4,6 +4,7 @@
  * application can do.
  */
 import pg from "pg";
+import type { Actor } from "../src/actor.js";
 import { appDatabaseUrl } from "../src/env.js";
 import { SEED_ACTORS } from "../src/seed-data.js";
 
@@ -11,6 +12,19 @@ export const actorId = (externalSubject: string): string => {
   const actor = SEED_ACTORS.find((candidate) => candidate.externalSubject === externalSubject);
   if (!actor) throw new Error(`no seeded actor ${externalSubject}`);
   return actor.id;
+};
+
+/** The seeded actor as the identity layer would hand it to authorize(). */
+export const actor = (externalSubject: string): Actor => {
+  const seeded = SEED_ACTORS.find((candidate) => candidate.externalSubject === externalSubject);
+  if (!seeded) throw new Error(`no seeded actor ${externalSubject}`);
+  return {
+    id: seeded.id,
+    externalSubject: seeded.externalSubject,
+    email: seeded.email,
+    groups: seeded.groups,
+    active: true,
+  };
 };
 
 export type ActorContext = {

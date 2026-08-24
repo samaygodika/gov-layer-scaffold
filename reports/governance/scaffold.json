@@ -1,0 +1,70 @@
+{
+  "app": "scaffold",
+  "tables": [
+    {
+      "name": "_scaffold_fixture",
+      "pk": "id:uuid",
+      "audit_trigger": true
+    }
+  ],
+  "audit_event_shape": [
+    "id",
+    "occurred_at",
+    "actor_id",
+    "app",
+    "action",
+    "resource_type",
+    "resource_id",
+    "before",
+    "after",
+    "request_id"
+  ],
+  "audit_actions_seen": [
+    "delete",
+    "insert"
+  ],
+  "approval_constraints": [
+    "approval_actor_matches",
+    "approval_decision_has_decider",
+    "approval_decision_has_rationale",
+    "approval_decision_vocabulary",
+    "approval_maker_checker"
+  ],
+  "app_role_grants": {
+    "_scaffold_fixture": [
+      "DELETE",
+      "INSERT",
+      "SELECT",
+      "UPDATE"
+    ],
+    "approval": [
+      "INSERT",
+      "SELECT",
+      "UPDATE"
+    ],
+    "audit_event": [
+      "SELECT"
+    ]
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/fixtures",
+      "action": "read",
+      "resourceType": "_scaffold_fixture"
+    },
+    {
+      "method": "POST",
+      "path": "/fixtures",
+      "action": "write",
+      "resourceType": "_scaffold_fixture"
+    },
+    {
+      "method": "POST",
+      "path": "/fixtures/:id/approvals",
+      "action": "approve",
+      "resourceType": "_scaffold_fixture"
+    }
+  ],
+  "routes_outside_registry": []
+}
