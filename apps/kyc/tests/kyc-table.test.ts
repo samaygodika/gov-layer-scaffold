@@ -65,17 +65,20 @@ describe("kyc_case", () => {
         `SELECT action, actor_id, app, request_id, before, after
            FROM audit_event
           WHERE resource_type = 'kyc_case' AND resource_id = $1
-          ORDER BY action`,
+          ORDER BY occurred_at, action`,
         [id],
       );
 
-      // Both rows carry the same occurred_at — it defaults to the transaction
-      // timestamp — so the insert and the update are ordered by action, not time.
-      expect(audited.rows.map((row) => row.action)).toEqual(["insert", "update"]);
-      const update = audited.rows[1]!;
-      expect(update.before?.status).toBe("pending");
-      expect(update.after?.status).toBe("approved");
-      expect(update).toMatchObject({ actor_id: alice, app: "kyc", request_id: "req-ac-1" });
+      const updates = audited.rows.filter((row) => row.action === "update");
+      expect(updates).toHaveLength(1);
+      expect(updates[0]!.before?.status).toBe("pending");
+      expect(updates[0]!.after?.status).toBe("approved");
+      expect(updates[0]).toMatchObject({ actor_id: alice, app: "kyc", request_id: "req-ac-1" });
+
+      const inserts = audited.rows.filter((row) => row.action === "insert");
+      expect(inserts).toHaveLength(1);
+      expect(inserts[0]!.before).toBeNull();
+      expect(inserts[0]!.after?.status).toBe("pending");
     });
   });
 
