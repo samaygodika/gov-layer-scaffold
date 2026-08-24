@@ -72,9 +72,14 @@ export const writeDevActor = (subject: string): void => {
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // content-type only when something is being sent: the framework rejects a
+  // bodyless POST that claims to carry JSON.
   const response = await fetch(path, {
     ...init,
-    headers: { "content-type": "application/json", ...init?.headers },
+    headers: {
+      ...(init?.body === undefined ? {} : { "content-type": "application/json" }),
+      ...init?.headers,
+    },
   });
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {

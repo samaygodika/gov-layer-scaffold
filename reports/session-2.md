@@ -158,6 +158,14 @@ app's shape ~10 min; migration `0100` ~5 min; seed discovery and fixtures ~15 mi
 layer ~35 min; UI ~40 min; tests ~35 min; debugging ~15 min; artifacts (README, governance report,
 this file) ~25 min; PR and CI ~10 min.
 
+Redone after browser testing (~15 min): two UI-only defects the test suite could not see, because
+both live between Vite/the browser and the server rather than in a route or a query — the dev-server
+proxy key `/api` also matched the UI's own `api.ts` module request (blank page), and the shared
+`request()` helper sent `content-type: application/json` on the bodyless "open a review" POST, which
+the framework refuses. Fixed as `^/api/` and by setting the header only when there is a body. Four
+UX gaps found in the same pass were closed: a rationale hint, per-field diff highlighting in the
+timeline, a loading indicator, and notices that now clear on browser-back as well as on `← queue`.
+
 Redone: the environment. The session started against a database with no relations and a stray
 untracked `package-lock.json` blocking `git pull`; Postgres had to be started, `scripts/setup-db.sh`
 re-run and the scaffold's own suite run green (`43 passed`) before any KYC code, so that a later

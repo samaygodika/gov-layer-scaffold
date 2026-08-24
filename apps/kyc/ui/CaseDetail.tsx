@@ -9,18 +9,36 @@ import type { AuditEntry, CaseApproval, CaseDetail as CaseDetailPayload, Decisio
 
 const time = (value: string | null): string => (value ? new Date(value).toLocaleString() : "—");
 
+const fieldValue = (row: Record<string, unknown> | null, key: string): string =>
+  row && key in row ? JSON.stringify(row[key]) : "—";
+
+/**
+ * One row per key the audit event mentions, marked when it changed. Two JSON
+ * blobs side by side leave the reader to spot the difference, which for
+ * `documents` means reading past a lot of unchanged text.
+ */
 function Diff({ entry }: { entry: AuditEntry }) {
+  const keys = [
+    ...new Set([...Object.keys(entry.before ?? {}), ...Object.keys(entry.after ?? {})]),
+  ];
   return (
-    <div className="diff">
-      <div>
-        <strong>before</strong>
-        <pre>{entry.before ? JSON.stringify(entry.before, null, 2) : "—"}</pre>
-      </div>
-      <div>
-        <strong>after</strong>
-        <pre>{entry.after ? JSON.stringify(entry.after, null, 2) : "—"}</pre>
-      </div>
-    </div>
+    <table className="diff">
+      <tbody>
+        {keys.map((key) => {
+          const before = fieldValue(entry.before, key);
+          const after = fieldValue(entry.after, key);
+          const changed = before !== after;
+          return (
+            <tr key={key} className={changed ? "changed" : undefined}>
+              <th>{key}</th>
+              <td>{before}</td>
+              <td>{changed ? "→" : ""}</td>
+              <td>{changed ? after : ""}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 
@@ -129,6 +147,9 @@ export function CaseDetail({
                   size={60}
                 />
               </label>
+              {rationale.trim() === "" && (
+                <p className="hint">a rationale is required before a decision can be recorded</p>
+              )}
               <p>
                 {(["approved", "rejected"] as Decision[]).map((decision) => (
                   <button

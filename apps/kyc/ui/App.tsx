@@ -36,9 +36,16 @@ export function App() {
   const [caseId, setCaseId] = useState<string | null>(caseIdFromHash());
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const onHashChange = (): void => setCaseId(caseIdFromHash());
+    // Navigating — including with the browser's own back button — drops the
+    // notice from the screen it belonged to.
+    const onHashChange = (): void => {
+      setNotice(null);
+      setError(null);
+      setCaseId(caseIdFromHash());
+    };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
@@ -49,6 +56,7 @@ export function App() {
       setError("no dev actor selected — pick one in the top bar");
       return;
     }
+    setLoading(true);
     try {
       setMe(await fetchMe());
       if (caseId) setDetail(await fetchCase(caseId));
@@ -56,6 +64,8 @@ export function App() {
       setError(null);
     } catch (failure) {
       setError((failure as Error).message);
+    } finally {
+      setLoading(false);
     }
   }, [caseId, filters]);
 
@@ -97,6 +107,7 @@ export function App() {
       <main>
         {error && <div className="error">{error}</div>}
         {notice && <div className="notice">{notice}</div>}
+        {loading && <div className="loading">loading…</div>}
         {caseId && detail ? (
           <CaseDetail
             detail={detail}

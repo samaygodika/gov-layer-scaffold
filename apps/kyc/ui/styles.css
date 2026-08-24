@@ -96,9 +96,44 @@ pre {
 }
 
 .diff {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
+  margin-top: 0.4rem;
+  font-family: ui-monospace, monospace;
+}
+
+.diff th {
+  width: 10rem;
+  font-weight: normal;
+  color: #666;
+}
+
+.diff td {
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+
+.diff tr {
+  cursor: default;
+}
+
+.diff tr.changed {
+  background: #fffbe6;
+}
+
+.diff tr.changed th {
+  color: #111;
+  font-weight: 600;
+}
+
+.hint {
+  color: #8a6d00;
+  font-size: 0.8125rem;
+  margin: 0.3rem 0 0;
+}
+
+.loading {
+  font-size: 0.875rem;
+  color: #666;
+  margin-bottom: 0.6rem;
 }
 
 .pagination {
