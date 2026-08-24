@@ -28,7 +28,12 @@ export const SEED_ACTORS: SeedActor[] = [
   },
 ];
 
-const RESOURCE_TYPES = ["kyc_case", "refund_request"];
+/**
+ * `_scaffold_fixture` is included so the scaffold's own demo server — the one
+ * the route, dev-identity and governance-report tests drive — has grants to
+ * authorize against without waiting for an app session.
+ */
+const RESOURCE_TYPES = ["_scaffold_fixture", "kyc_case", "refund_request"];
 
 export const SEED_GRANTS: { role: string; resourceType: string; action: string }[] =
   RESOURCE_TYPES.flatMap((resourceType) => [

@@ -1,0 +1,74 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # The two roles, exactly as in .env.example: migrations own the schema,
+      # the application and the tests connect as app_role.
+      DATABASE_URL_OWNER: postgres://scaffold_owner:scaffold_owner@localhost:5432/tools
+      DATABASE_URL: postgres://app_role:app_role@localhost:5432/tools
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: create roles and database
+        run: PGPASSWORD=postgres ./scripts/setup-db.sh
+
+      - name: migrate
+        run: npm run migrate
+
+      - name: seed
+        run: npm run seed
+
+      - name: typecheck
+        run: npm run typecheck
+
+      # Includes the two guardrails: all_app_tables_are_audited (SC-8) and
+      # all_routes_are_registered (SC-10). A new app table without the audit
+      # trigger, or a route registered outside route(), fails the build here.
+      - name: test
+        run: npm test
+
+      - name: tamper check
+        run: npm run tamper-check
+
+      - name: governance report
+        run: npm run governance-report
+
+      - name: the committed governance reports match a fresh run
+        run: git diff --exit-code -- reports/governance
+
+      - name: upload junit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit
+          path: reports/junit/*.xml
+          if-no-files-found: error
