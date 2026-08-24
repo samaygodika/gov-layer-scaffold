@@ -18,13 +18,19 @@ Node 22 and a local Postgres 16 are the only prerequisites.
 cp .env.example .env
 npm install
 npm run migrate              # as scaffold_owner (DATABASE_URL_OWNER)
-npm run seed                 # alice / bob / carol + permission grants, as scaffold_owner
+npm run seed                 # actors, grants, and app fixtures (default 50 rows)
+npm run seed -- --rows=10000 # seed the refunds load fixture
 npm test                     # Vitest as app_role; writes reports/junit/<session>.xml
 npm run typecheck
 npm run governance-report    # writes reports/governance/<app>.json (verification-addendum.md §A)
 npm run tamper-check         # proves the two CI guardrails fire; see below
 npm run dev -w apps/<name>   # starts an app (app sessions add these)
 ```
+
+For the refunds dashboard, run `npm run dev -w apps/refunds` and open
+`http://localhost:5173`. The API listens on port 3000 and Vite proxies `/refunds`
+to it. The top-bar actor switcher writes the `dev_actor` cookie and reloads the
+page; it can also be set manually with `curl -b 'dev_actor=bob' ...`.
 
 `npm test` writes `reports/junit/session-1b.xml` by default; set `SESSION=<id>` to change the
 filename. Every test name begins with the acceptance-criterion id it covers (`SC-2 …`), which is how
@@ -77,6 +83,12 @@ the handler; the handler receives that transaction as `tx`. The scaffold exports
 so there is no other way to add a route. `apps/<name>/server/app.ts` exporting `createApp()` is also
 how `npm run governance-report` discovers an app; until an app exists it reports on the scaffold's own
 demo server (`reports/governance/scaffold.json`).
+
+The root seed discovers each `apps/*/server/seed.ts` module after seeding actors
+and grants. Each app seed uses the owner-provided client with transaction-local
+actor, request, and app settings, so trigger-generated fixture audit rows retain
+the domain actor attribution. Seeding is idempotent when the table already has
+at least the requested number of rows.
 
 ## Known limitations
 

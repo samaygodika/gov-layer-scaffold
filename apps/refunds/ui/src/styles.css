@@ -1,0 +1,54 @@
+:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #1d2939; background: #f6f8fb; line-height: 1.5; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: inherit; text-decoration: none; }
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 18px max(24px, calc((100% - 1120px) / 2)); color: white; background: #172b4d; }
+.topbar > a { font-size: 1.1rem; font-weight: 700; }
+.topbar nav { display: flex; align-items: center; gap: 22px; }
+.topbar label { display: flex; align-items: center; gap: 6px; font-size: .9rem; }
+main { max-width: 1120px; margin: 0 auto; padding: 42px 24px 72px; }
+h1, h2 { margin-top: 0; color: #101828; }
+h1 { font-size: 2rem; letter-spacing: -.03em; }
+h2 { font-size: 1.1rem; }
+.page-heading { display: flex; justify-content: space-between; align-items: start; gap: 20px; margin-bottom: 26px; }
+.page-heading p { margin: -14px 0 0; color: #667085; }
+.button, button { border: 1px solid #cfd6e4; border-radius: 6px; padding: 9px 14px; background: white; color: #344054; cursor: pointer; font: inherit; }
+button:disabled { cursor: not-allowed; opacity: .5; }
+.primary { border-color: #2457c5; color: white; background: #2457c5; }
+.filters, .card { margin-bottom: 22px; padding: 22px; border: 1px solid #e4e7ec; border-radius: 10px; background: white; box-shadow: 0 2px 5px #10182808; }
+.filters { display: flex; gap: 18px; }
+label { display: grid; gap: 6px; color: #475467; font-size: .9rem; }
+input, select, textarea { min-width: 160px; border: 1px solid #cfd6e4; border-radius: 5px; padding: 9px 10px; font: inherit; color: #1d2939; background: white; }
+textarea { min-height: 80px; resize: vertical; }
+.table-wrap { overflow: hidden; border: 1px solid #e4e7ec; border-radius: 10px; background: white; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 15px 16px; border-bottom: 1px solid #edf0f5; text-align: left; }
+th { color: #667085; font-size: .78rem; letter-spacing: .05em; text-transform: uppercase; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: #f7f9fc; }
+.status { display: inline-block; border-radius: 99px; padding: 3px 9px; font-size: .78rem; font-weight: 600; text-transform: capitalize; }
+.status.pending { color: #9a6700; background: #fff3cd; }
+.status.approved { color: #067647; background: #dcfae6; }
+.status.rejected { color: #b42318; background: #fee4e2; }
+.empty, .muted { color: #667085; padding: 20px; }
+.pagination { display: flex; justify-content: center; align-items: center; gap: 18px; margin-top: 20px; }
+.back { display: inline-block; margin-bottom: 24px; color: #2457c5; }
+.fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.fields div { display: grid; gap: 4px; }
+.fields span { color: #667085; font-size: .8rem; }
+.wide { grid-column: span 4; }
+.actions { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; }
+.actions h2 { width: 100%; margin-bottom: 0; }
+.rationale { flex: 1 1 100%; }
+.approval { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid #edf0f5; }
+.approval span { color: #667085; font-size: .9rem; }
+.approval p { margin: 4px 0 0; }
+.timeline article { display: flex; gap: 14px; padding: 0 0 24px; }
+.dot { width: 11px; height: 11px; margin-top: 6px; flex: 0 0 11px; border-radius: 50%; background: #2457c5; }
+.timeline article > div:last-child { display: grid; gap: 4px; }
+.timeline span { color: #667085; font-size: .9rem; }
+pre { overflow: auto; margin: 4px 0 0; padding: 12px; border-radius: 5px; color: #344054; background: #f6f8fb; font-size: .78rem; }
+.form { display: grid; max-width: 620px; gap: 18px; }
+.form button { width: max-content; }
+.error { max-width: 1120px; margin: 20px auto -20px; padding: 14px 18px; border: 1px solid #fecdca; border-radius: 7px; color: #b42318; background: #fef3f2; }
+@media (max-width: 760px) { .topbar, .page-heading { align-items: start; flex-direction: column; } .topbar nav { flex-wrap: wrap; } .fields { grid-template-columns: repeat(2, 1fr); } .wide { grid-column: span 2; } table { min-width: 760px; } .table-wrap { overflow-x: auto; } }
