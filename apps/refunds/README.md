@@ -18,7 +18,10 @@ npm run dev -w apps/refunds
 ```
 
 Open `http://localhost:5173`. `npm run dev -w apps/refunds` starts the API on
-port 3000 and the Vite UI on port 5173. They can also be started separately:
+port 3000 and the Vite UI on port 5173. The KYC app uses the same two ports, so
+run one app at a time; the UI's proxy target is port 3000 unconditionally, so
+moving the API with `PORT` leaves the UI proxying to nothing. They can also be
+started separately:
 
 ```sh
 npm run dev:server -w apps/refunds

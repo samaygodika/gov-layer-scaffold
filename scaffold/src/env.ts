@@ -1,6 +1,16 @@
 import { config } from "dotenv";
+import { fileURLToPath } from "node:url";
 
-config();
+/**
+ * The single `.env` lives at the repository root, but workspace scripts such as
+ * `npm run dev -w apps/kyc` run with the app directory as cwd, where dotenv's
+ * default lookup finds nothing. Resolving the path from this module keeps one
+ * `.env` for every entry point regardless of cwd. Values already present in the
+ * process environment still win — dotenv does not override.
+ */
+export const envFile = fileURLToPath(new URL("../../.env", import.meta.url));
+
+config({ path: envFile });
 
 function required(name: string): string {
   const value = process.env[name];

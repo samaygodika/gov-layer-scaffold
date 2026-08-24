@@ -3,7 +3,9 @@
  * is not registered at all — asserted both by what the server reports about its
  * own hooks and by what a request carrying X-Dev-Actor actually gets.
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDemoServer } from "../src/demo-server.js";
 import { DEV_ACTOR_COOKIE, DEV_ACTOR_HEADER } from "../src/dev-identity.js";
 import type { ScaffoldServer } from "../src/server.js";
@@ -92,6 +94,42 @@ describe("dev-mode identity", () => {
       });
       expect(response.statusCode).toBe(401);
       expect(response.json()).toEqual({ error: "no identity on the request" });
+    }
+  });
+
+  it("SC-11 the switcher survives a workspace cwd, because .env is read from the repository root", async () => {
+    // `npm run dev -w apps/kyc` runs with the app directory as cwd. dotenv's
+    // default lookup finds no .env there, which used to leave NODE_ENV unset and
+    // the switcher unregistered: every request in the UI was a 401.
+    const cwd = process.cwd();
+    const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
+    const appDir = fileURLToPath(new URL("../../apps/kyc", import.meta.url));
+    const nodeEnvBefore = process.env.NODE_ENV;
+    const databaseUrlBefore = process.env.DATABASE_URL;
+    try {
+      process.chdir(appDir);
+      delete process.env.NODE_ENV;
+      delete process.env.DATABASE_URL;
+      vi.resetModules();
+      const { appDatabaseUrl, envFile } = await import("../src/env.js");
+      const { isDevelopment } = await import("../src/dev-identity.js");
+      expect(envFile).toBe(`${repoRoot}.env`);
+
+      // CI passes both URLs in the environment and has no .env at all, so the
+      // rest only applies to a local checkout that followed the README.
+      if (!existsSync(envFile)) return;
+      const dotenv = readFileSync(envFile, "utf8");
+      expect(isDevelopment()).toBe(dotenv.includes("NODE_ENV=development"));
+      expect(appDatabaseUrl()).toBe(
+        /^DATABASE_URL=(.+)$/m.exec(dotenv)?.[1],
+      );
+    } finally {
+      process.chdir(cwd);
+      if (nodeEnvBefore === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = nodeEnvBefore;
+      if (databaseUrlBefore === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = databaseUrlBefore;
+      vi.resetModules();
     }
   });
 

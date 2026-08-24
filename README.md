@@ -8,6 +8,7 @@ It contains a small scaffold (four tables, two triggers, two helpers) and two ap
 - `verification-addendum.md` — what gets measured and how
 - `reports/` — per-session reports and governance JSON, committed by the session that produced them
 - `AGENTS.md` — instructions for Devin
+- `apps/kyc/README.md`, `apps/refunds/README.md` — each app's routes, screens and rules
 
 ## Running
 
@@ -19,18 +20,40 @@ cp .env.example .env
 npm install
 npm run migrate              # as scaffold_owner (DATABASE_URL_OWNER)
 npm run seed                 # actors, grants, and app fixtures (default 50 rows)
-npm run seed -- --rows=10000 # seed the refunds load fixture
+npm run seed -- --rows=10000 # tops both apps' fixtures up to 10,000 rows (the load case)
 npm test                     # Vitest as app_role; writes reports/junit/<session>.xml
 npm run typecheck
 npm run governance-report    # writes reports/governance/<app>.json (verification-addendum.md §A)
 npm run tamper-check         # proves the two CI guardrails fire; see below
-npm run dev -w apps/<name>   # starts an app (app sessions add these)
+npm run dev -w apps/<name>   # starts one app: Fastify on :3000, Vite on :5173
 ```
 
-For the refunds dashboard, run `npm run dev -w apps/refunds` and open
-`http://localhost:5173`. The API listens on port 3000 and Vite proxies `/refunds`
-to it. The top-bar actor switcher writes the `dev_actor` cookie and reloads the
-page; it can also be set manually with `curl -b 'dev_actor=bob' ...`.
+`setup-db.sh` needs a superuser connection and defaults to `psql -U postgres -h localhost`, which on a
+stock local Postgres asks for a password nobody has. Override the connection instead:
+
+```
+PSQL="sudo -u postgres psql -v ON_ERROR_STOP=1" ./scripts/setup-db.sh
+```
+
+`.env` is read from the repository root by every entry point, whatever the cwd, so the workspace
+commands below work from anywhere in the repo.
+
+### The two apps
+
+```
+npm run dev -w apps/kyc       # KYC review queue     → http://localhost:5173
+npm run dev -w apps/refunds   # refunds dashboard    → http://localhost:5173
+```
+
+Each one starts a Fastify API on port 3000 and a Vite dev server on port 5173 that proxies to it, so
+the UI is same-origin and the `dev_actor` cookie reaches the server — open port 5173, not 3000. Both
+apps use the same two ports, so **run one at a time**; `PORT=<n>` moves the KYC API and its proxy
+together, while the refunds proxy targets 3000 unconditionally. Server only, no UI:
+`npm run dev:server -w apps/<name>`.
+
+The top-bar actor switcher writes the `dev_actor` cookie and reloads the page. What each app does
+with the shared scaffold — its routes, its screens, and where the maker-checker rule bites — is in
+`apps/kyc/README.md` and `apps/refunds/README.md`.
 
 `npm test` writes `reports/junit/session-1b.xml` by default; set `SESSION=<id>` to change the
 filename. Every test name begins with the acceptance-criterion id it covers (`SC-2 …`), which is how
