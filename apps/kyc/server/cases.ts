@@ -185,6 +185,11 @@ export const pendingApproval = async (tx: Db, caseId: string): Promise<CaseAppro
 /**
  * The case's audit history: its own rows plus the rows of every approval on it,
  * because a decision is an `update` on `approval` (spec, audit_event notes).
+ *
+ * `occurred_at` defaults to the transaction timestamp, so the two rows a decision
+ * writes carry the same instant and there is no real order between them. The
+ * tie-break on (resource_type, action) is presentational — it puts the approval
+ * before the case status it caused — and keeps the timeline stable across reads.
  */
 export async function caseHistory(tx: Db, caseId: string): Promise<AuditEntry[]> {
   const rows = await tx.query<{
@@ -207,7 +212,7 @@ export async function caseHistory(tx: Db, caseId: string): Promise<AuditEntry[]>
                SELECT a.id::text FROM approval a
                 WHERE a.resource_type = $1 AND a.resource_id = $2
             ))
-      ORDER BY e.occurred_at, e.id`,
+      ORDER BY e.occurred_at, e.resource_type, e.action, e.id`,
     [RESOURCE_TYPE, caseId],
   );
 

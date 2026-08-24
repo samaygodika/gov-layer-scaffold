@@ -65,10 +65,12 @@ describe("kyc_case", () => {
         `SELECT action, actor_id, app, request_id, before, after
            FROM audit_event
           WHERE resource_type = 'kyc_case' AND resource_id = $1
-          ORDER BY occurred_at, id`,
+          ORDER BY action`,
         [id],
       );
 
+      // Both rows carry the same occurred_at — it defaults to the transaction
+      // timestamp — so the insert and the update are ordered by action, not time.
       expect(audited.rows.map((row) => row.action)).toEqual(["insert", "update"]);
       const update = audited.rows[1]!;
       expect(update.before?.status).toBe("pending");
