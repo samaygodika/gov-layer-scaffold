@@ -42,10 +42,9 @@ file was edited.
 | AC-8 | Refunds governance report is generated and committed | pass | none | `git diff --exit-code -- reports/governance` — clean after generation |
 | AC-9 | Refunds session report is filled and committed | pass | none | `test -s reports/session-2.md` — combined report is non-empty |
 
-Full combined run: `SESSION=session-2 npm test` — `Test Files 15 passed (15)`,
-`Tests 69 passed (69)`. `npm run typecheck` reaches all app TS/TSX and fails only
-on the known Vite 5/Vite 6 `TS2769` plugin-type incompatibility documented below;
-tamper-check, governance generation, and the governance diff check pass.
+Full combined run: `npm run typecheck` and `SESSION=session-2 npm test` both pass;
+the suite reports `Test Files 15 passed (15)` and `Tests 69 passed (69)`.
+Tamper-check, governance generation, and the governance diff check also pass.
 
 ### Verified in the browser
 
@@ -76,10 +75,8 @@ That run also caught a defect the API tests had missed: the request-review and c
 - Body-less browser mutations omit `content-type: application/json` when no body exists.
   Tests reproduce the old Fastify 400 and the corrected successful request-review and
   completion requests.
-- Root typechecking now includes `apps/**/*.tsx` and both Vite configs. The refunds
-  Vite 6 config conflicts with the root/KYC Vite 5 types (`TS2769`, incompatible
-  `Plugin` types), so the merged root configuration is retained and this incompatibility
-  is reported rather than restoring the deleted per-app tsconfig.
+- Refunds uses the merged KYC UI toolchain versions, including Vite 5, so both Vite
+  configs share one hoisted Vite type installation under the root typecheck.
 
 ## 3. Ambiguities and questions
 
@@ -112,7 +109,8 @@ That run also caught a defect the API tests had missed: the request-review and c
 - KYC dependencies remain in `apps/kyc/package.json`: React 18, React DOM, React types,
   Vite React plugin, Vite 5, and `concurrently`.
 - Refunds dependencies remain in `apps/refunds/package.json`: React 18, React DOM,
-  React types, Vite React plugin, Vite 6, and `concurrently`.
+  React types, Vite React plugin, Vite 5, `concurrently`, and the `@scaffold/core`
+  workspace dependency.
 - The package lock retains dependency entries for both workspaces.
 
 ## 6. Tests I disabled, skipped, or weakened
@@ -136,8 +134,9 @@ artifact were retained; this report adds the refunds and combined-suite facts.
   `approval_maker_checker` message, Alice's approval and audit diff, Carol's hidden
   controls, and filter/pagination checks.
 - The browser run found and the client fixed the empty-body JSON content-type bug.
-- Fresh-database verification covered migration, both app seeds, combined typecheck,
-  combined tests, tamper checks, governance reports, and the refunds build.
+- Fresh-database verification covered migration, both app seeds, the clean combined
+  typecheck, combined tests, tamper checks, governance reports, the Vite 5 refunds
+  build, and a dev-server/proxy smoke check.
 
 ## 9. Governance report
 
