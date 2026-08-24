@@ -54,7 +54,10 @@ const errorMessage = async (response: Response): Promise<string> => {
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...options,
-    headers: { "content-type": "application/json", ...(options?.headers ?? {}) },
+    headers: {
+      ...(options?.body ? { "content-type": "application/json" } : {}),
+      ...(options?.headers ?? {}),
+    },
   });
   if (!response.ok) throw new Error(await errorMessage(response));
   return (await response.json()) as T;

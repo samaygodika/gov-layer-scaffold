@@ -174,6 +174,35 @@ describe("refunds dashboard", () => {
     )).toBe(true);
   });
 
+  it("bodyless request-review POST succeeds without a JSON content type", async () => {
+    const id = await createRefund("bob");
+    const unfixedClient = await server.inject({
+      method: "POST",
+      url: `/refunds/${id}/approvals`,
+      headers: { "x-dev-actor": "bob", "content-type": "application/json" },
+    });
+    expect(unfixedClient.statusCode).toBe(400);
+    expect(JSON.stringify(unfixedClient.json())).toMatch(/Body cannot be empty/);
+
+    const response = await request("POST", `/refunds/${id}/approvals`, "bob");
+    expect(response.statusCode).toBe(201);
+  });
+
+  it("bodyless completion POST succeeds without a JSON content type", async () => {
+    const id = await createRefund("bob");
+    const unfixedClient = await server.inject({
+      method: "POST",
+      url: `/refunds/${id}/complete`,
+      headers: { "x-dev-actor": "bob", "content-type": "application/json" },
+    });
+    expect(unfixedClient.statusCode).toBe(400);
+    expect(JSON.stringify(unfixedClient.json())).toMatch(/Body cannot be empty/);
+
+    const response = await request("POST", `/refunds/${id}/complete`, "bob");
+    expect(response.statusCode).toBe(200);
+    expect(response.json().status).toBe("approved");
+  });
+
   it("AC-6 list pagination is server-side and supports 10,000 rows", async () => {
     await withActor(alice, "ac6-load", "refunds", async (tx) => {
       const count = await tx.query<{ count: string }>("SELECT count(*)::text AS count FROM refund_request");
