@@ -24,7 +24,7 @@ Explicit non-goal: this is not a UI framework, an ORM, or a low-code platform. K
 | role | used for | can do |
 |---|---|---|
 | `scaffold_owner` | running migrations | owns all tables and trigger functions |
-| `app_role` | what the application connects as | SELECT on `actor`, `permission_grant`, `audit_event`; INSERT/UPDATE/SELECT on `approval`; full DML on app tables; **nothing else** |
+| `app_role` | what the application connects as | SELECT on `actor`, `permission_grant`, `audit_event`; on `approval`: SELECT, INSERT, and **column-limited UPDATE** (`decided_by`, `decision`, `decided_at`, `rationale` only); full DML on app tables; **nothing else** |
 
 `app_role` has **no INSERT, UPDATE, or DELETE on `audit_event`**. Audit rows still get written because the trigger functions are `SECURITY DEFINER` and owned by `scaffold_owner`. This gap between the two roles is what makes the audit tamper-proof and hand-written audit rows impossible.
 
@@ -109,6 +109,7 @@ Constraints, all at the table:
 - `CHECK (decided_by IS NULL OR decided_by <> requested_by)` — maker-checker
 - `CHECK ((decision IS NULL) = (decided_by IS NULL))` and `CHECK ((decision IS NULL) = (rationale IS NULL))` — a decision always has a decider and a rationale
 - trigger `approval_actor_matches()` — see mechanism 3
+- `requested_by`, `resource_type`, `resource_id` immutable after insert — enforced by the column-level UPDATE grant (mechanism 3), not a CHECK
 
 ## The three enforcement mechanisms
 
@@ -160,6 +161,7 @@ The `CHECK` constraint above rejects `decided_by = requested_by`. On its own tha
 
 - on insert, `NEW.requested_by` must equal `current_setting('app.actor_id')`
 - whenever `NEW.decided_by` is not null, it must equal `current_setting('app.actor_id')`
+- after insert, `requested_by`, `resource_type`, and `resource_id` are **immutable**: `app_role`'s UPDATE grant on `approval` is limited to `decided_by`, `decision`, `decided_at`, `rationale`. This is enforced by the column-level grant, not by trigger logic — the database rejects the write, so no enumeration of bad updates is required. Without it a single actor can request as themselves, rewrite `requested_by` to a second actor and self-decide, or repoint an already-decided approval at a different `resource_id` that was never reviewed. Both satisfy the maker-checker `CHECK`, which compares the two columns rather than who wrote them.
 
 With this, the identity in every `approval` row is the identity of the transaction that wrote it, whatever the application passed in. App code must **still** set `requested_by` / `decided_by` from the session actor, never from the request body — the trigger is there so that getting this wrong fails loudly instead of silently.
 
