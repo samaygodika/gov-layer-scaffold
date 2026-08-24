@@ -45,6 +45,12 @@ file was edited.
 Full combined run: `SESSION=session-2 npm test` — `Test Files 15 passed (15)`,
 `Tests 69 passed (69)`.
 
+### Verified in the browser
+
+A browser run against the local stack (Fastify on `127.0.0.1:3000`, Vite on `localhost:5173`) exercised the AC-4 flow on screen: Bob created a 25,000-cent refund and requested review, his own approval attempt was refused with Postgres' `approval_maker_checker` message rendered verbatim while the refund stayed pending, and after switching actors Alice approved with a rationale so the status became approved and the audit timeline showed the decision with actor, timestamp, and a `status: pending → approved` diff. The same run confirmed Carol sees no approval controls, blank rationales leave the decision buttons disabled, direct completion of an at-threshold refund is refused by the database trigger, and the list's filters and 50-row server-side pagination behave as specified over 10,007 rows.
+
+That run also caught a defect the API tests had missed: the request-review and completion buttons sent `content-type: application/json` with no body, so Fastify rejected them before any database work. Both are fixed and covered by tests.
+
 ## 2. Decisions I made that the spec did not
 
 - Used a 1-based refunds `page` parameter: omitted or empty values default to page 1,
