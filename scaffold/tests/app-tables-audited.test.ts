@@ -36,7 +36,12 @@ describe("all_app_tables_are_audited", () => {
             AND t.tgfoid = 'audit_row'::regproc
           ORDER BY c.relname`,
       );
-      expect(triggers.rows.map((row) => row.table)).toEqual(["_scaffold_fixture", "approval"]);
+      // arrayContaining, not toEqual: an app session adds audited tables of its
+      // own (kyc_case), and this test is about the scaffold's two. That no
+      // *unaudited* table exists is the sibling test above.
+      expect(triggers.rows.map((row) => row.table)).toEqual(
+        expect.arrayContaining(["_scaffold_fixture", "approval"]),
+      );
     } finally {
       await client.end();
     }
