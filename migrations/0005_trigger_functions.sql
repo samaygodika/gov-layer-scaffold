@@ -67,9 +67,9 @@ BEGIN
       USING ERRCODE = 'raise_exception';
   END IF;
 
-  -- Otherwise a single actor could request as themselves, rewrite requested_by
-  -- to someone else, and then decide: maker-checker compares the two columns,
-  -- not who wrote them.
+  -- Second line of defence behind the column-level UPDATE grant in 0006, which
+  -- is what actually stops this for app_role; kept for a legible error, and for
+  -- any role that holds a wider grant.
   IF TG_OP = 'UPDATE' AND NEW.requested_by IS DISTINCT FROM OLD.requested_by THEN
     RAISE EXCEPTION 'approval.requested_by is immutable once the row exists'
       USING ERRCODE = 'raise_exception';

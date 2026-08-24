@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { actorId, expectFailure, inTransaction, setActor } from "./helpers.js";
+import { actorId, expectFailure, expectRejected, inTransaction, setActor } from "./helpers.js";
 
 const alice = actorId("alice");
 const bob = actorId("bob");
@@ -63,7 +63,24 @@ describe("separation of duties", () => {
     expect(failure.message).toMatch(/approval\.decided_by .* must equal app\.actor_id/);
   });
 
-  it("SC-4 requested_by cannot be rewritten after insert", async () => {
+  it("SC-4 app_role can update only the decision columns of approval", async () => {
+    const granted = await inTransaction({ actorId: alice, app: "kyc" }, (tx) =>
+      tx.query<{ column_name: string }>(
+        `SELECT column_name FROM information_schema.column_privileges
+          WHERE table_name = 'approval' AND privilege_type = 'UPDATE'
+            AND grantee = 'app_role'
+          ORDER BY column_name`,
+      ),
+    );
+    expect(granted.rows.map((row) => row.column_name)).toEqual([
+      "decided_at",
+      "decided_by",
+      "decision",
+      "rationale",
+    ]);
+  });
+
+  it("SC-4 an actor cannot launder a request onto a colleague and then decide it", async () => {
     const failure = await inTransaction({ actorId: alice, app: "kyc" }, async (tx) => {
       const inserted = await insertRequest(tx, alice);
       return expectFailure(
@@ -73,7 +90,35 @@ describe("separation of duties", () => {
         ]),
       );
     });
-    expect(failure.message).toMatch(/approval\.requested_by is immutable/);
+    expect(failure.code).toBe("42501");
+    expect(failure.message).toMatch(/permission denied for (table|column) .*approval/);
+  });
+
+  it("SC-4 a decided approval cannot be repointed at another resource", async () => {
+    const failures = await inTransaction({ actorId: bob, app: "kyc" }, async (tx) => {
+      const inserted = await insertRequest(tx, bob);
+      const id = inserted.rows[0]!.id;
+      await setActor(tx, { actorId: alice, app: "kyc" });
+      await tx.query(
+        `UPDATE approval
+            SET decided_by = $1, decision = 'approved', decided_at = now(), rationale = 'fine'
+          WHERE id = $2`,
+        [alice, id],
+      );
+      return [
+        await expectRejected(tx, "UPDATE approval SET resource_id = 'other-case' WHERE id = $1", [
+          id,
+        ]),
+        await expectRejected(
+          tx,
+          "UPDATE approval SET resource_type = 'refund_request' WHERE id = $1",
+          [id],
+        ),
+      ];
+    });
+    for (const failure of failures) {
+      expect(failure.code).toBe("42501");
+    }
   });
 
   it("SC-5 a decision without a rationale is rejected", async () => {

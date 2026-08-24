@@ -11,8 +11,8 @@ report, and UI are out of scope and are left for session 1b.
 |---|---|---|---|---|
 | SC-1 | Migrations run clean on an empty database as `scaffold_owner` | pass | `scaffold/tests/migrations.test.ts::SC-1 every migration is applied and recorded in schema_migration`, `::SC-1 trigger functions are SECURITY DEFINER and owned by scaffold_owner` | `sudo -u postgres PGPASSWORD=postgres ./scripts/setup-db.sh && npm run migrate` on a dropped-and-recreated `tools`: `apply 0001_roles_grants.sql … apply 0007_scaffold_fixture.sql` |
 | SC-2 | As `app_role`: INSERT, UPDATE and DELETE on `audit_event` all fail | pass | `scaffold/tests/audit-event-grants.test.ts::SC-2 app_role cannot INSERT into audit_event` (+ UPDATE, DELETE, `::SC-2 app_role holds only SELECT on audit_event`) | `npm test` → `✓ scaffold/tests/audit-event-grants.test.ts (4 tests)`; each rejection is SQLSTATE `42501 permission denied for table audit_event` |
-| SC-3 | Inserting an `approval` with `decided_by = requested_by` is rejected | pass | `scaffold/tests/approval.test.ts::SC-3 an approval decided by its own requester is rejected`, `::SC-3 the same request decided by a second actor is accepted` | `npm test` → `✓ scaffold/tests/approval.test.ts (7 tests)`; rejection carries `constraint: approval_maker_checker` |
-| SC-4 | `requested_by` ≠ `app.actor_id` on insert, or `decided_by` ≠ `app.actor_id` on update, is rejected | pass | `scaffold/tests/approval.test.ts::SC-4 requested_by that is not the transaction actor is rejected`, `::SC-4 decided_by that is not the transaction actor is rejected`, `::SC-4 requested_by cannot be rewritten after insert` | `npm test`; errors: `approval.requested_by (…) must equal app.actor_id (…)`, `approval.decided_by (…) must equal app.actor_id (…)` and `approval.requested_by is immutable once the row exists` |
+| SC-3 | Inserting an `approval` with `decided_by = requested_by` is rejected | pass | `scaffold/tests/approval.test.ts::SC-3 an approval decided by its own requester is rejected`, `::SC-3 the same request decided by a second actor is accepted` | `npm test` → `✓ scaffold/tests/approval.test.ts (9 tests)`; rejection carries `constraint: approval_maker_checker` |
+| SC-4 | `requested_by` ≠ `app.actor_id` on insert, or `decided_by` ≠ `app.actor_id` on update, is rejected; and neither `requested_by` nor the resource a decision refers to can be rewritten afterwards | pass | `scaffold/tests/approval.test.ts::SC-4 requested_by that is not the transaction actor is rejected`, `::SC-4 decided_by that is not the transaction actor is rejected`, `::SC-4 app_role can update only the decision columns of approval`, `::SC-4 an actor cannot launder a request onto a colleague and then decide it`, `::SC-4 a decided approval cannot be repointed at another resource` | `npm test`; trigger errors `approval.requested_by (…) must equal app.actor_id (…)` and `approval.decided_by (…) must equal app.actor_id (…)`; both laundering attempts stop at SQLSTATE `42501` from the column-level UPDATE grant |
 | SC-5 | Setting `decision` without `rationale` is rejected | pass | `scaffold/tests/approval.test.ts::SC-5 a decision without a rationale is rejected`, `::SC-5 a rationale and decider without a decision is rejected` | `npm test`; constraints `approval_decision_has_rationale` and `approval_decision_has_decider` |
 | SC-6 | An UPDATE on a fixture table inside an actor transaction produces exactly one `audit_event` with correct `before`, `after`, `actor_id`, `request_id`, `app` | pass | `scaffold/tests/audit-trigger.test.ts::SC-6 an UPDATE inside an actor transaction writes exactly one audit_event`, `::SC-6 a DELETE writes one audit_event with before set and after null` | `npm test` → `✓ scaffold/tests/audit-trigger.test.ts (3 tests)`; the update event matches `{actor_id: alice, app: "kyc", request_id: "req-sc6", before: {note: "before"}, after: {note: "after"}}` |
 | SC-7 | The same UPDATE with no `app.actor_id` set fails with the trigger's error, and no row changes | pass | `scaffold/tests/audit-trigger.test.ts::SC-7 a mutation with no app.actor_id fails and changes no row` | `npm test`; error `audit_row: app.actor_id is not set; mutations must run inside withActor()`, and the row still reads `note = 'untouched'` afterwards |
@@ -54,11 +54,16 @@ Test names carry the criterion id, and `npm test` writes `reports/junit/session-
 - **`_scaffold_fixture` is named with a leading underscore** to mark it as not an app table; the
   future `all_app_tables_are_audited` test will need to decide whether to include it (it has the
   trigger either way).
-- **`approval.requested_by` is immutable after insert.** The spec pins `requested_by` to the session
-  actor on insert only, which left one actor able to insert a request as themselves, UPDATE
-  `requested_by` to a colleague, and then decide it — `approval_maker_checker` compares the two
-  columns, not who wrote them. Adversarial testing hit exactly that path, so
-  `approval_actor_matches()` now rejects any UPDATE that changes `requested_by`.
+- **`app_role`'s UPDATE on `approval` is column-level**, `(decided_by, decision, decided_at,
+  rationale)` — narrower than the role table's bare `UPDATE`. Pinning `requested_by` only on insert
+  left two laundering paths that `approval_maker_checker` cannot see, because it compares two
+  columns and not who wrote them or what they described at decision time: insert a request as
+  yourself, repoint `requested_by` at a colleague, then decide it; or decide a harmless request and
+  then repoint `resource_type`/`resource_id` at the resource you actually wanted approved.
+  Adversarial testing walked the first one end to end. A request is written once and only ever
+  decided afterwards, so the grant matches how the table is used. `approval_actor_matches()` also
+  rejects an UPDATE that changes `requested_by`, as a legible error and for any role holding a wider
+  grant, but the grant is the mechanism.
 - **Tests roll back**: every test runs in a transaction that is rolled back, and re-sets
   `app.actor_id` mid-transaction where a second actor is needed, so cross-actor flows are provable
   without committing rows.
@@ -81,6 +86,10 @@ Test names carry the criterion id, and `npm test` writes `reports/junit/session-
   the clean run from the command line (dropped `tools`, recreated it, ran `npm run migrate`) and
   the test asserts the resulting state — applied ledger, table set, function ownership and
   `SECURITY DEFINER`.
+- **`AGENTS.md` says every app table grants full DML to `app_role`.** `approval` is a scaffold
+  table, and the spec's own role table gives it `SELECT, INSERT, UPDATE` (no DELETE) — approvals are
+  a permanent record. The column list narrows that `UPDATE` further; see §2. Application code needs
+  no other column, so this is not a grant an app session should widen — flag it instead.
 - **`--rows=N` for `npm run seed`**: `AGENTS.md` mentions it for load data, but no app tables exist
   yet. The flag is accepted and prints that app sessions seed their own load data.
 - **Node version**: `AGENTS.md` says Node 22; the machine's default `node` is v20 with 22 available

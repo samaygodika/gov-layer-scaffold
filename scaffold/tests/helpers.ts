@@ -52,9 +52,31 @@ export async function inTransaction<T>(
   }
 }
 
-export async function expectFailure(
-  promise: Promise<unknown>,
-): Promise<{ message: string; code: string | undefined; constraint: string | undefined }> {
+export type SqlFailure = {
+  message: string;
+  code: string | undefined;
+  constraint: string | undefined;
+};
+
+/**
+ * Like expectFailure, but leaves the transaction usable: a rejected statement
+ * aborts the transaction, so a test that makes several attempts needs each one
+ * wrapped in a savepoint.
+ */
+export async function expectRejected(
+  tx: pg.Client,
+  sql: string,
+  params: unknown[] = [],
+): Promise<SqlFailure> {
+  await tx.query("SAVEPOINT expect_rejected");
+  try {
+    return await expectFailure(tx.query(sql, params));
+  } finally {
+    await tx.query("ROLLBACK TO SAVEPOINT expect_rejected");
+  }
+}
+
+export async function expectFailure(promise: Promise<unknown>): Promise<SqlFailure> {
   try {
     await promise;
   } catch (error) {

@@ -27,4 +27,11 @@ CREATE TRIGGER approval_actor_matches BEFORE INSERT OR UPDATE ON approval
 CREATE TRIGGER audit AFTER INSERT OR UPDATE OR DELETE ON approval
   FOR EACH ROW EXECUTE FUNCTION audit_row();
 
-GRANT SELECT, INSERT, UPDATE ON approval TO app_role;
+-- A request is written once and only ever decided afterwards, so the only
+-- updatable columns are the decision ones. Without the column list, one actor
+-- can insert a request as themselves, repoint requested_by at a colleague and
+-- then decide it, or repoint resource_type/resource_id after a decision so an
+-- approval of one resource comes to stand for another: approval_maker_checker
+-- compares columns, not who wrote them or what they described at decision time.
+GRANT SELECT, INSERT ON approval TO app_role;
+GRANT UPDATE (decided_by, decision, decided_at, rationale) ON approval TO app_role;
