@@ -85,8 +85,9 @@ how `npm run governance-report` discovers an app; until an app exists it reports
 demo server (`reports/governance/scaffold.json`).
 
 The root seed discovers each `apps/*/server/seed.ts` module after seeding actors
-and grants. Refund fixtures are inserted through `withActor()` as `app_role`,
-so their audit rows are real. Seeding is idempotent when the table already has
+and grants. Each app seed uses the owner-provided client with transaction-local
+actor, request, and app settings, so trigger-generated fixture audit rows retain
+the domain actor attribution. Seeding is idempotent when the table already has
 at least the requested number of rows.
 
 ## Known limitations

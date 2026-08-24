@@ -43,7 +43,9 @@ file was edited.
 | AC-9 | Refunds session report is filled and committed | pass | none | `test -s reports/session-2.md` — combined report is non-empty |
 
 Full combined run: `SESSION=session-2 npm test` — `Test Files 15 passed (15)`,
-`Tests 69 passed (69)`.
+`Tests 69 passed (69)`. `npm run typecheck` reaches all app TS/TSX and fails only
+on the known Vite 5/Vite 6 `TS2769` plugin-type incompatibility documented below;
+tamper-check, governance generation, and the governance diff check pass.
 
 ### Verified in the browser
 
@@ -74,6 +76,10 @@ That run also caught a defect the API tests had missed: the request-review and c
 - Body-less browser mutations omit `content-type: application/json` when no body exists.
   Tests reproduce the old Fastify 400 and the corrected successful request-review and
   completion requests.
+- Root typechecking now includes `apps/**/*.tsx` and both Vite configs. The refunds
+  Vite 6 config conflicts with the root/KYC Vite 5 types (`TS2769`, incompatible
+  `Plugin` types), so the merged root configuration is retained and this incompatibility
+  is reported rather than restoring the deleted per-app tsconfig.
 
 ## 3. Ambiguities and questions
 
